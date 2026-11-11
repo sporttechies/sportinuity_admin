@@ -33,7 +33,11 @@ export default function CalendarPage() {
     // dateFrom/dateTo match any trip overlapping the range.
     requestsApi
       .list({ status: SHOWN, dateFrom: first, dateTo: last, limit: 500 })
-      .then((r) => !cancelled && (setItems(r.data.filter((x) => x.departure), setError(""))))
+      .then((r) => {
+        if (cancelled) return;
+        setItems(r.data.filter((x) => x.departure));
+        setError("");
+      })
       .catch((e) => !cancelled && setError(e instanceof Error ? e.message : "Could not load trips."))
       .finally(() => !cancelled && setLoading(false));
     return () => {
