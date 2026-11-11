@@ -1,3 +1,14 @@
-import { AuthGate } from '@/components/auth-gate'
+import { AuthGate } from "@/components/auth-gate";
+import { AppShell } from "@/components/app-shell";
 
-export default function ProtectedLayout({ children }: { children: React.ReactNode }) { return <AuthGate>{children}</AuthGate> }
+export default function ProtectedLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <AuthGate>
+      <AppShell>{children}</AppShell>
+    </AuthGate>
+  );
+}
