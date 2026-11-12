@@ -1,4 +1,4 @@
-import type { RequestStatus } from "./api";
+import type { InvoiceStatus, RequestStatus } from "./api";
 
 // Labels as managers see them. "confirmed" is what the UI calls Approved.
 export const STATUS_LABELS: Record<RequestStatus, string> = {
@@ -72,4 +72,44 @@ export function formatDateTime(value?: string | null) {
         day: "numeric", month: "short", year: "numeric",
         hour: "2-digit", minute: "2-digit",
       });
+}
+
+// ---- invoices ----------------------------------------------------------------
+
+export const INVOICE_STATUS_LABELS: Record<InvoiceStatus, string> = {
+  draft: "Draft",
+  issued: "Issued",
+  paid: "Paid",
+  void: "Void",
+};
+export const INVOICE_STATUS_STYLES: Record<InvoiceStatus, string> = {
+  draft: "bg-slate-100 text-slate-600",
+  issued: "bg-[#e8f4fb] text-[#007cc2]",
+  paid: "bg-[#eaf5ee] text-[#1c673e]",
+  void: "bg-red-50 text-red-700",
+};
+
+export function formatMoney(amount: number, currency: string) {
+  try {
+    return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amount);
+  } catch {
+    return `${currency} ${amount.toFixed(2)}`;
+  }
+}
+
+/** [{code, label}] for a currency picker, e.g. "KES - Kenyan Shilling". */
+export function currencyOptions(): { code: string; label: string }[] {
+  let codes: string[];
+  try {
+    codes = Intl.supportedValuesOf("currency");
+  } catch {
+    codes = ["USD", "EUR", "GBP", "KES", "UGX", "TZS", "ZAR", "NGN", "GHS", "AED"];
+  }
+  let names: Intl.DisplayNames | null = null;
+  try {
+    names = new Intl.DisplayNames(["en"], { type: "currency" });
+  } catch {
+    /* labels fall back to the code */
+  }
+  return codes.map((code) => ({ code, label: `${code} - ${names?.of(code) ?? code}` }));
 }

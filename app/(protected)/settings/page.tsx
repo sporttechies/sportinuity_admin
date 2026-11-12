@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { authApi, managerApi, type Manager } from "@/lib/api";
 import { ErrorNote } from "@/components/modal";
+import { BillingSettingsForm } from "@/components/billing-settings";
 
 const input =
   "mt-1.5 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-normal outline-none focus:border-[#007cc2] focus:ring-4 focus:ring-[#007cc2]/15 disabled:bg-slate-50 disabled:text-slate-500";
@@ -105,6 +106,7 @@ export default function SettingsPage() {
           </button>
         </div>
       </form>
+      <BillingSettingsForm />
     </div>
   );
 }

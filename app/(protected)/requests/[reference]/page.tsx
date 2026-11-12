@@ -18,6 +18,7 @@ import {
 } from "@/lib/constants";
 import { ConfirmDialog, ErrorNote, RejectDialog } from "@/components/modal";
 import { StatusBadge } from "@/components/status-badge";
+import { InvoicesPanel } from "@/components/invoices-panel";
 import { TeamAvatar } from "@/components/team-avatar";
 
 type Row = {
@@ -67,6 +68,10 @@ function eventText(e: { action: string; fromStatus: string | null; toStatus: str
   if (e.action === "created") return "Request submitted";
   if (e.action === "edited") return "Details edited";
   if (e.action === "deleted") return "Request deleted";
+  if (e.action === "invoice_issued") return "Invoice issued";
+  if (e.action === "invoice_paid") return "Invoice paid";
+  if (e.action === "invoice_unpaid") return "Invoice marked unpaid";
+  if (e.action === "invoice_voided") return "Invoice voided";
   if (e.action === "status_changed" && e.toStatus)
     return `${e.fromStatus ? `${STATUS_LABELS[e.fromStatus as RequestStatus] ?? e.fromStatus} → ` : ""}${
       STATUS_LABELS[e.toStatus as RequestStatus] ?? e.toStatus
@@ -194,7 +199,7 @@ export default function RequestDetailPage() {
               {data.teamId ? (
                 <Link href={`/teams/${data.teamId}`} className="font-semibold text-[#007cc2] hover:underline">{data.team}</Link>
               ) : (
-                data.team
+                (data.team || "No team")
               )}{" "}
               · {data.event}
             </p>
@@ -269,7 +274,7 @@ export default function RequestDetailPage() {
               <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-2">
                 {[
                   ["Event", data.event],
-                  ["Team", data.team],
+                  ["Team", data.team || "No team"],
                   ["From", data.from || "—"],
                   ["Destination", data.location],
                   ["Dates", formatDateRange(data.departure, data.returnDate)],
@@ -339,6 +344,17 @@ export default function RequestDetailPage() {
               )
             )}
           </section>
+
+          <InvoicesPanel
+            reference={reference}
+            onChanged={async () => {
+              try {
+                apply(await requestsApi.get(reference));
+              } catch {
+                /* the panel already shows its own state */
+              }
+            }}
+          />
 
           {!editing && (data.travellers?.length ?? 0) > 0 && (
             <section className="rounded-2xl border border-slate-200 bg-white p-5">

@@ -311,3 +311,118 @@ export const managerApi = {
       body: json({ fullName }),
     }),
 };
+
+// ---- invoices ----------------------------------------------------------------
+export type InvoiceStatus = "draft" | "issued" | "paid" | "void";
+
+export type Invoice = {
+  id: string;
+  number: string | null; // null while a draft
+  status: InvoiceStatus;
+  requestId: string;
+  requestReference: string;
+  teamId: string;
+  team: string;
+  event: string;
+  currency: string;
+  taxRate: number;
+  subtotal: number;
+  taxAmount: number;
+  total: number;
+  notes: string | null;
+  issueDate: string | null;
+  dueDate: string | null;
+  issuedAt: string | null;
+  paidAt: string | null;
+  voidedAt: string | null;
+  voidReason: string | null;
+  emailedAt?: string | null;
+  createdAt?: string;
+  items: { description: string; quantity: number; unitPrice: number; lineTotal: number }[];
+};
+
+export type InvoiceContext = {
+  invoices: Invoice[];
+  classes: { type: string; label: string; count: number }[];
+  defaults: { currency: string; taxRate: number; paymentTermsDays: number };
+  canCreate: boolean;
+  reason: string | null;
+};
+
+export type BillingSettings = {
+  companyName: string;
+  companyAddress: string | null;
+  companyEmail: string | null;
+  companyPhone: string | null;
+  taxNumber: string | null;
+  paymentInstructions: string | null;
+  invoiceFooter: string | null;
+  defaultCurrency: string;
+  defaultTaxRate: number;
+  paymentTermsDays: number;
+  bankName: string | null;
+  bankAccountName: string | null;
+  bankAccountNumber: string | null;
+  bankSwiftCode: string | null;
+};
+
+/** What happened when an invoice email was sent. */
+export type EmailResult = {
+  status: "sent" | "skipped" | "failed";
+  reason?: string;
+  recipients?: string[];
+};
+
+export type InvoiceInput = {
+  currency?: string;
+  taxRate?: number;
+  dueDate?: string | null;
+  notes?: string | null;
+  prices?: Record<string, number>;
+};
+
+export const invoicesApi = {
+  context: async (reference: string) =>
+    (await request<{ data: InvoiceContext }>(`/api/invoices/for-request/${ref(reference)}`)).data,
+  list: (params: { status?: string; q?: string; teamId?: string; limit?: number; offset?: number } = {}) =>
+    request<{ data: Invoice[]; total: number; limit: number; offset: number }>(
+      `/api/invoices${qs(params)}`,
+    ),
+  create: async (body: InvoiceInput & { reference: string; prices: Record<string, number> }) =>
+    (await request<{ data: Invoice }>("/api/invoices", { method: "POST", body: json(body) })).data,
+  update: async (id: string, patch: InvoiceInput) =>
+    (await request<{ data: Invoice }>(`/api/invoices/${id}`, { method: "PATCH", body: json(patch) })).data,
+  remove: (id: string) => request<void>(`/api/invoices/${id}`, { method: "DELETE" }),
+  issue: async (id: string) => {
+    const r = await request<{ data: Invoice; email: EmailResult | null }>(`/api/invoices/${id}/issue`, { method: "POST" });
+    return { invoice: r.data, email: r.email };
+  },
+  resend: async (id: string) => {
+    const r = await request<{ data: Invoice; email: EmailResult | null }>(`/api/invoices/${id}/resend`, { method: "POST" });
+    return { invoice: r.data, email: r.email };
+  },
+  setPaid: async (id: string, paid: boolean) =>
+    (await request<{ data: Invoice }>(`/api/invoices/${id}/${paid ? "paid" : "unpaid"}`, { method: "POST" })).data,
+  void: async (id: string, reason: string) =>
+    (await request<{ data: Invoice }>(`/api/invoices/${id}/void`, { method: "POST", body: json({ reason }) })).data,
+  /** The PDF is behind the login, so it is fetched with the token and shown from a blob URL. */
+  pdf: async (id: string): Promise<Blob> => {
+    let response: Response;
+    try {
+      response = await fetch(`${API_URL}/api/invoices/${id}/pdf`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+    } catch {
+      throw new ApiError("Can't reach the server. Check your connection and try again.", 0);
+    }
+    if (!response.ok) {
+      if (response.status === 401) signOut();
+      const data = await response.json().catch(() => ({}));
+      throw new ApiError(data.message || "Could not load the invoice PDF", response.status);
+    }
+    return response.blob();
+  },
+  settings: async () => (await request<{ data: BillingSettings }>("/api/invoices/settings")).data,
+  saveSettings: async (patch: Partial<BillingSettings>) =>
+    (await request<{ data: BillingSettings }>("/api/invoices/settings", { method: "PUT", body: json(patch) })).data,
+};

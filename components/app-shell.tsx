@@ -11,6 +11,7 @@ import {
   ClipboardList,
   LayoutDashboard,
   LogOut,
+  Receipt,
   Menu,
   Search,
   Settings,
@@ -44,6 +45,7 @@ const scrollbarCss = `
 const NAV: { label: string; href: string; icon: LucideIcon; title: string }[] = [
   { label: "Overview", href: "/", icon: LayoutDashboard, title: "Logistics overview" },
   { label: "Requests", href: "/requests", icon: ClipboardList, title: "Requests" },
+  { label: "Invoices", href: "/invoices", icon: Receipt, title: "Invoices" },
   { label: "Teams", href: "/teams", icon: Users, title: "Teams" },
   { label: "Calendar", href: "/calendar", icon: CalendarDays, title: "Calendar" },
   { label: "Settings", href: "/settings", icon: Settings, title: "Settings" },
