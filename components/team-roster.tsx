@@ -107,7 +107,7 @@ export function TeamRoster({ team }: { team: TeamDetail }) {
                     {opening === p.id ? "Opening…" : "View birth certificate / passport"}
                   </button>
                 ) : (
-                  <p className="mt-1 text-xs font-semibold text-red-600">No document</p>
+                  <p className="mt-1 text-xs text-slate-400">No document uploaded</p>
                 )}
               </div>
             </li>
