@@ -142,6 +142,30 @@ export type TeamDetail = {
   }[];
   requestCounts: Record<string, number>;
   requests: LogisticsRequest[];
+  isTeamSport: boolean;
+  maxPlayers: number | null;
+  edition: string | null;
+  ageCategory: string | null;
+  coach: { name: string | null; email: string | null; phone: string | null };
+  rosterSubmittedAt: string | null;
+};
+
+export type Edition = {
+  id: string;
+  name: string;
+  isOpen: boolean;
+  teams: number;
+  createdAt: string;
+};
+
+export type Player = {
+  id: string;
+  fullName: string;
+  dateOfBirth: string | null;
+  jerseyNumber: string | null;
+  position: string | null;
+  photoUrl: string | null;
+  hasDocument: boolean;
 };
 
 // ---- http ------------------------------------------------------------------
@@ -310,6 +334,49 @@ export const managerApi = {
       method: "PATCH",
       body: json({ fullName }),
     }),
+};
+
+// ---- editions + squads ----------------------------------------------------------
+export const editionsApi = {
+  list: async () =>
+    (await request<{ data: Edition[] }>("/api/manager/editions")).data,
+  create: async (name: string, isOpen = true) =>
+    (await request<{ data: Edition }>("/api/manager/editions", {
+      method: "POST",
+      body: json({ name, isOpen }),
+    })).data,
+  update: async (id: string, patch: { name?: string; isOpen?: boolean }) =>
+    (await request<{ data: Edition }>(`/api/manager/editions/${id}`, {
+      method: "PATCH",
+      body: json(patch),
+    })).data,
+  remove: (id: string) =>
+    request<void>(`/api/manager/editions/${id}`, { method: "DELETE" }),
+};
+
+export const rosterApi = {
+  players: async (teamId: string) =>
+    (await request<{
+      data: { limit: number | null; players: Player[]; submittedAt: string | null };
+    }>(`/api/manager/teams/${teamId}/players`)).data,
+  /** Private documents need the token, so they're fetched and opened from a blob. */
+  async openDocument(teamId: string, playerId: string) {
+    const win = window.open("", "_blank");
+    try {
+      const response = await fetch(
+        `${API_URL}/api/manager/teams/${teamId}/players/${playerId}/document`,
+        { headers: { Authorization: `Bearer ${getToken()}` } },
+      );
+      if (!response.ok) throw new ApiError("Could not open the document", response.status);
+      const url = URL.createObjectURL(await response.blob());
+      if (win) win.location.href = url;
+      else window.open(url, "_blank");
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (error) {
+      win?.close();
+      throw error;
+    }
+  },
 };
 
 // ---- invoices ----------------------------------------------------------------

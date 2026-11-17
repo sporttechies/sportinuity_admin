@@ -15,6 +15,7 @@ import {
   Menu,
   Search,
   Settings,
+  Trophy,
   Users,
   X,
   type LucideIcon,
@@ -47,6 +48,7 @@ const NAV: { label: string; href: string; icon: LucideIcon; title: string }[] = 
   { label: "Requests", href: "/requests", icon: ClipboardList, title: "Requests" },
   { label: "Invoices", href: "/invoices", icon: Receipt, title: "Invoices" },
   { label: "Teams", href: "/teams", icon: Users, title: "Teams" },
+  { label: "Editions", href: "/editions", icon: Trophy, title: "Editions" },
   { label: "Calendar", href: "/calendar", icon: CalendarDays, title: "Calendar" },
   { label: "Settings", href: "/settings", icon: Settings, title: "Settings" },
 ];
