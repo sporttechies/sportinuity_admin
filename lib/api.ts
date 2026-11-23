@@ -379,6 +379,109 @@ export const rosterApi = {
   },
 };
 
+// ---- suppliers ----------------------------------------------------------------
+export type Supplier = {
+  id: string;
+  name: string;
+  type: import("./constants").SupplierType;
+  contactName: string | null;
+  email: string | null;
+  phone: string | null;
+  city: string | null;
+  country: string | null;
+  website: string | null;
+  notes: string | null;
+  isActive: boolean;
+  quotations: number;
+  accepted: number;
+  createdAt: string;
+};
+
+export type SupplierInput = {
+  name: string;
+  type: string;
+  contactName?: string;
+  email?: string;
+  phone?: string;
+  city?: string;
+  country?: string;
+  website?: string;
+  notes?: string;
+  isActive?: boolean;
+};
+
+export const suppliersApi = {
+  list: async (params: { type?: string; q?: string; active?: boolean; limit?: number; offset?: number } = {}) => {
+    const search = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== "") search.set(k, String(v));
+    });
+    return request<{ data: Supplier[]; total: number; counts: Record<string, number> }>(
+      `/api/suppliers?${search}`,
+    );
+  },
+  create: async (body: SupplierInput) =>
+    (await request<{ data: Supplier }>("/api/suppliers", { method: "POST", body: json(body) })).data,
+  update: async (id: string, body: Partial<SupplierInput>) =>
+    (await request<{ data: Supplier }>(`/api/suppliers/${id}`, { method: "PATCH", body: json(body) })).data,
+  remove: (id: string) => request<void>(`/api/suppliers/${id}`, { method: "DELETE" }),
+};
+
+// ---- quotations ---------------------------------------------------------------
+export type Quotation = {
+  id: string;
+  reference: string;
+  supplier: {
+    id: string;
+    name: string;
+    type: import("./constants").SupplierType;
+    contactName: string | null;
+    email: string | null;
+    phone: string | null;
+    isActive: boolean;
+  };
+  serviceType: import("./constants").SupplierType;
+  description: string;
+  amount: number | null;
+  currency: string;
+  validUntil: string | null;
+  expired: boolean;
+  status: import("./constants").QuoteStatus;
+  notes: string | null;
+  decidedAt: string | null;
+  createdAt: string;
+};
+
+export type QuotationInput = {
+  supplierId?: string;
+  serviceType?: string;
+  description: string;
+  amount?: number | null;
+  currency?: string;
+  validUntil?: string | null;
+  notes?: string | null;
+  status?: "requested" | "received";
+};
+
+export const quotationsApi = {
+  forRequest: async (reference: string) =>
+    (await request<{ data: Quotation[] }>(`/api/quotations/for-request/${encodeURIComponent(reference)}`)).data,
+  create: async (reference: string, body: QuotationInput) =>
+    (await request<{ data: Quotation }>("/api/quotations", {
+      method: "POST",
+      body: json({ reference, ...body }),
+    })).data,
+  update: async (id: string, body: Partial<QuotationInput>) =>
+    (await request<{ data: Quotation }>(`/api/quotations/${id}`, { method: "PATCH", body: json(body) })).data,
+  accept: async (id: string) =>
+    (await request<{ data: Quotation }>(`/api/quotations/${id}/accept`, { method: "POST" })).data,
+  reject: async (id: string) =>
+    (await request<{ data: Quotation }>(`/api/quotations/${id}/reject`, { method: "POST" })).data,
+  reopen: async (id: string) =>
+    (await request<{ data: Quotation }>(`/api/quotations/${id}/reopen`, { method: "POST" })).data,
+  remove: (id: string) => request<void>(`/api/quotations/${id}`, { method: "DELETE" }),
+};
+
 // ---- invoices ----------------------------------------------------------------
 export type InvoiceStatus = "draft" | "issued" | "paid" | "void";
 

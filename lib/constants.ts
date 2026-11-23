@@ -113,3 +113,42 @@ export function currencyOptions(): { code: string; label: string }[] {
   }
   return codes.map((code) => ({ code, label: `${code} - ${names?.of(code) ?? code}` }));
 }
+
+// ---- suppliers ---------------------------------------------------------------
+export type SupplierType = "accommodation" | "transport" | "catering" | "other";
+
+export const SUPPLIER_TYPE_LABELS: Record<SupplierType, string> = {
+  accommodation: "Accommodation",
+  transport: "Transport",
+  catering: "Catering",
+  other: "Other",
+};
+
+export const SUPPLIER_TYPE_STYLES: Record<SupplierType, string> = {
+  accommodation: "bg-[#e8f4fb] text-[#007cc2]",
+  transport: "bg-[#fff4dc] text-[#a36a00]",
+  catering: "bg-[#eaf5ee] text-[#1c673e]",
+  other: "bg-slate-100 text-slate-600",
+};
+
+export const SUPPLIER_TYPES = Object.keys(SUPPLIER_TYPE_LABELS) as SupplierType[];
+
+export const SUPPLIER_COUNTRIES = [
+  "KE","UG","TZ","RW","BI","ET","SS","SO","NG","GH","ZA","ZM","ZW","MW","MZ","BW","NA","CD",
+  "CM","SN","CI","EG","MA","TN","DZ","GB","US","CA","FR","DE","ES","IT","NL","PT","AE","QA",
+  "TR","IN","CN","JP","BR","AU",
+];
+
+export type QuoteStatus = "requested" | "received" | "accepted" | "rejected";
+export const QUOTE_STATUS_LABELS: Record<QuoteStatus, string> = {
+  requested: "Awaiting price",
+  received: "Received",
+  accepted: "Accepted",
+  rejected: "Rejected",
+};
+export const QUOTE_STATUS_STYLES: Record<QuoteStatus, string> = {
+  requested: "bg-[#fff4dc] text-[#a36a00]",
+  received: "bg-[#e8f4fb] text-[#007cc2]",
+  accepted: "bg-[#eaf5ee] text-[#1c673e]",
+  rejected: "bg-slate-100 text-slate-500",
+};
