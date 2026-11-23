@@ -596,3 +596,149 @@ export const invoicesApi = {
   saveSettings: async (patch: Partial<BillingSettings>) =>
     (await request<{ data: BillingSettings }>("/api/invoices/settings", { method: "PUT", body: json(patch) })).data,
 };
+
+// ---- rooming ------------------------------------------------------------------
+export type RoomType = "single" | "double" | "twin" | "triple" | "quad" | "custom";
+
+export type RoomGuest = {
+  id: string;
+  index: number;
+  category: "adult" | "child" | "infant";
+  firstName: string;
+  lastName: string;
+  type: "regular" | "vip" | "vvip" | "staff";
+  dietary: string | null;
+};
+
+export type Room = {
+  id: string;
+  label: string;
+  roomType: RoomType;
+  capacity: number;
+  notes: string | null;
+  occupants: RoomGuest[];
+};
+
+export type RoomingList = {
+  reference: string;
+  event: string;
+  destination: string;
+  checkIn: string | null;
+  checkOut: string | null;
+  status: "draft" | "final";
+  finalizedAt: string | null;
+  notes: string | null;
+  hotel: { name: string; description: string | null } | null;
+  rooms: Room[];
+  unassigned: RoomGuest[];
+  proposals: { id: string; roomType: RoomType | null; travellerIds: string[]; note: string | null }[];
+  travellerCount: number;
+};
+
+export const roomingApi = {
+  get: async (reference: string) =>
+    (await request<{ data: RoomingList }>(`/api/rooming/${ref(reference)}`)).data,
+  addRooms: async (reference: string, body: { roomType: RoomType; count?: number; capacity?: number; label?: string; notes?: string }) =>
+    (await request<{ data: RoomingList }>(`/api/rooming/${ref(reference)}/rooms`, { method: "POST", body: json(body) })).data,
+  updateRoom: async (id: string, body: { label?: string; notes?: string | null; roomType?: RoomType; capacity?: number }) =>
+    (await request<{ data: RoomingList }>(`/api/rooming/rooms/${id}`, { method: "PATCH", body: json(body) })).data,
+  deleteRoom: async (id: string) =>
+    (await request<{ data: RoomingList }>(`/api/rooming/rooms/${id}`, { method: "DELETE" })).data,
+  setOccupants: async (roomId: string, travellerIds: string[]) =>
+    (await request<{ data: RoomingList }>(`/api/rooming/rooms/${roomId}/occupants`, { method: "PUT", body: json({ travellerIds }) })).data,
+  suggest: async (reference: string, body: { roomType: RoomType; vipSingle: boolean }) =>
+    (await request<{ data: RoomingList }>(`/api/rooming/${ref(reference)}/suggest`, { method: "POST", body: json(body) })).data,
+  clear: async (reference: string) =>
+    (await request<{ data: RoomingList }>(`/api/rooming/${ref(reference)}/clear`, { method: "POST" })).data,
+  saveNotes: async (reference: string, notes: string) =>
+    (await request<{ data: RoomingList }>(`/api/rooming/${ref(reference)}`, { method: "PATCH", body: json({ notes }) })).data,
+  finalize: async (reference: string, force = false) =>
+    (await request<{ data: RoomingList }>(`/api/rooming/${ref(reference)}/finalize`, { method: "POST", body: json({ force }) })).data,
+  reopen: async (reference: string) =>
+    (await request<{ data: RoomingList }>(`/api/rooming/${ref(reference)}/reopen`, { method: "POST" })).data,
+  pdf: async (reference: string): Promise<Blob> => {
+    let response: Response;
+    try {
+      response = await fetch(`${API_URL}/api/rooming/${ref(reference)}/pdf`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+    } catch {
+      throw new ApiError("Can't reach the server. Check your connection and try again.", 0);
+    }
+    if (!response.ok) {
+      if (response.status === 401) signOut();
+      const data = await response.json().catch(() => ({}));
+      throw new ApiError(data.message || "Could not load the rooming PDF", response.status);
+    }
+    return response.blob();
+  },
+};
+
+// ---- meals --------------------------------------------------------------------
+export type MealType = "breakfast" | "lunch" | "dinner" | "snack" | "packed";
+
+export type Meal = {
+  id: string;
+  date: string;
+  type: MealType;
+  time: string | null;
+  venue: string | null;
+  headcount: number | null;
+  menu: string | null;
+  notes: string | null;
+  status: "planned" | "confirmed";
+};
+
+export type MealPlan = {
+  reference: string;
+  event: string;
+  destination: string;
+  checkIn: string | null;
+  checkOut: string | null;
+  travellerCount: number;
+  meals: Meal[];
+  dietary: {
+    none: number;
+    groups: { label: string; count: number; travellers: { id: string; name: string }[] }[];
+  };
+};
+
+export type MealInput = {
+  mealDate: string;
+  mealType: MealType;
+  mealTime?: string | null;
+  venue?: string | null;
+  headcount?: number | string | null;
+  menu?: string | null;
+  notes?: string | null;
+};
+
+export const mealsApi = {
+  get: async (reference: string) => (await request<{ data: MealPlan }>(`/api/meals/${ref(reference)}`)).data,
+  create: async (reference: string, body: MealInput) =>
+    (await request<{ data: MealPlan }>(`/api/meals/${ref(reference)}/meals`, { method: "POST", body: json(body) })).data,
+  generate: async (reference: string, types: MealType[]) =>
+    (await request<{ data: MealPlan }>(`/api/meals/${ref(reference)}/generate`, { method: "POST", body: json({ types }) })).data,
+  update: async (id: string, body: Partial<MealInput> & { status?: "planned" | "confirmed" }) =>
+    (await request<{ data: MealPlan }>(`/api/meals/meals/${id}`, { method: "PATCH", body: json(body) })).data,
+  remove: async (id: string) =>
+    (await request<{ data: MealPlan }>(`/api/meals/meals/${id}`, { method: "DELETE" })).data,
+  confirmAll: async (reference: string) =>
+    (await request<{ data: MealPlan }>(`/api/meals/${ref(reference)}/confirm`, { method: "POST" })).data,
+  pdf: async (reference: string): Promise<Blob> => {
+    let response: Response;
+    try {
+      response = await fetch(`${API_URL}/api/meals/${ref(reference)}/pdf`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+    } catch {
+      throw new ApiError("Can't reach the server. Check your connection and try again.", 0);
+    }
+    if (!response.ok) {
+      if (response.status === 401) signOut();
+      const data = await response.json().catch(() => ({}));
+      throw new ApiError(data.message || "Could not load the meal plan PDF", response.status);
+    }
+    return response.blob();
+  },
+};

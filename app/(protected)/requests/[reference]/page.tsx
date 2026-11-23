@@ -20,6 +20,8 @@ import { ConfirmDialog, ErrorNote, RejectDialog } from "@/components/modal";
 import { StatusBadge } from "@/components/status-badge";
 import { InvoicesPanel } from "@/components/invoices-panel";
 import { QuotationsPanel } from "@/components/quotations-panel";
+import { RoomingPanel } from "@/components/rooming-panel";
+import { MealsPanel } from "@/components/meals-panel";
 import { TeamAvatar } from "@/components/team-avatar";
 
 type Row = {
@@ -73,6 +75,8 @@ function eventText(e: { action: string; fromStatus: string | null; toStatus: str
   if (e.action === "invoice_paid") return "Invoice paid";
   if (e.action === "invoice_unpaid") return "Invoice marked unpaid";
   if (e.action === "invoice_voided") return "Invoice voided";
+  if (e.action === "meals_confirmed") return "Meal plan confirmed";
+  if (e.action === "rooming_finalised") return "Rooming list finalised";
   if (e.action === "quote_added") return "Supplier quotation";
   if (e.action === "quote_accepted") return "Supplier assigned";
   if (e.action === "quote_rejected") return "Quotation rejected";
@@ -362,6 +366,8 @@ export default function RequestDetailPage() {
           />
 
           <QuotationsPanel reference={reference} requestStatus={data.status} />
+          <RoomingPanel reference={reference} requestStatus={data.status} />
+          <MealsPanel reference={reference} requestStatus={data.status} />
 
           {!editing && (data.travellers?.length ?? 0) > 0 && (
             <section className="rounded-2xl border border-slate-200 bg-white p-5">
