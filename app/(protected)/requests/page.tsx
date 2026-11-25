@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Check, ChevronLeft, ChevronRight, Plus, Search, Trash2, X } from "lucide-react";
-import { requestsApi, type LogisticsRequest } from "@/lib/api";
+import { messagesApi, requestsApi, type LogisticsRequest } from "@/lib/api";
 import {
   ALL_STATUSES,
   NEXT_STATUSES,
@@ -28,6 +28,7 @@ function RequestsList() {
   const teamId = params.get("teamId") || "";
   const dateFrom = params.get("dateFrom") || "";
   const dateTo = params.get("dateTo") || "";
+  const assignee = params.get("assignee") || "";
 
   const [search, setSearch] = useState(q);
   const [page, setPage] = useState(0);
@@ -66,7 +67,7 @@ function RequestsList() {
     setError("");
     try {
       const result = await requestsApi.list({
-        status, q, teamId, dateFrom, dateTo,
+        status, q, teamId, dateFrom, dateTo, assignee,
         limit: PAGE_SIZE, offset: page * PAGE_SIZE,
       });
       if (id !== loadId.current) return;
@@ -79,11 +80,20 @@ function RequestsList() {
     } finally {
       if (id === loadId.current) setLoading(false);
     }
-  }, [status, q, teamId, dateFrom, dateTo, page]);
+  }, [status, q, teamId, dateFrom, dateTo, assignee, page]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  // Requests with unread messages from teams get a badge.
+  const [unread, setUnread] = useState<Record<string, number>>({});
+  useEffect(() => {
+    messagesApi
+      .unread()
+      .then((r) => setUnread(Object.fromEntries(r.data.map((x) => [x.reference, x.count]))))
+      .catch(() => {});
+  }, [rows]);
 
   const count = (s: string) =>
     s === "" ? Object.values(counts).reduce((a, b) => a + b, 0) : (counts[s] ?? 0);
@@ -154,6 +164,16 @@ function RequestsList() {
             className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-sm outline-none focus:border-[#007cc2] focus:ring-4 focus:ring-[#007cc2]/15"
           />
         </div>
+        <select
+          value={assignee}
+          onChange={(e) => setFilter({ assignee: e.target.value })}
+          aria-label="Filter by staff"
+          className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm"
+        >
+          <option value="">All staff</option>
+          <option value="me">Assigned to me</option>
+          <option value="none">Unassigned</option>
+        </select>
         <label className="flex items-center gap-2 text-sm text-slate-500">
           Trips from
           <input type="date" value={dateFrom} onChange={(e) => setFilter({ dateFrom: e.target.value })} className="h-10 rounded-xl border border-slate-200 bg-white px-2 text-sm text-[#0a0b0d]" />
@@ -192,8 +212,20 @@ function RequestsList() {
                       <Link href={`/requests/${encodeURIComponent(r.reference)}`} className="flex items-center gap-3">
                         <TeamAvatar name={r.team || "No team"} logoPath={r.teamLogoPath} />
                         <span className="min-w-0">
-                          <span className="block font-semibold text-[#007cc2]">{r.reference}</span>
+                          <span className="block font-semibold text-[#007cc2]">
+                            {r.reference}
+                            {unread[r.reference] > 0 && (
+                              <span className="ml-2 rounded-full bg-[#d0ee27] px-2 py-0.5 text-[10px] font-bold text-[#102331]">
+                                ✉ {unread[r.reference]} new
+                              </span>
+                            )}
+                          </span>
                           <span className="block max-w-[220px] truncate text-slate-600">{r.team || "No team"} · {r.event}</span>
+                          <span className="block max-w-[220px] truncate text-xs text-slate-400">
+                            {r.assignees?.length
+                              ? `${r.assignees[0].name}${r.assignees.length > 1 ? ` +${r.assignees.length - 1}` : ""}`
+                              : "Unassigned"}
+                          </span>
                         </span>
                       </Link>
                     </td>

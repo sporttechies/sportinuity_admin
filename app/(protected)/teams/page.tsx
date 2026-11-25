@@ -80,6 +80,11 @@ export default function TeamsPage() {
                   </td>
                   <td className="px-4 py-3">
                     {t.requestCount}
+                    {t.rosterStatus === "submitted" && (
+                      <span className="ml-2 rounded-full bg-[#fff4dc] px-2 py-0.5 text-xs font-semibold text-[#a36a00]">
+                        Squad to review
+                      </span>
+                    )}
                     {t.pendingCount > 0 && (
                       <span className="ml-2 rounded-full bg-[#f0e9fb] px-2 py-0.5 text-xs font-semibold text-[#7650ab]">
                         {t.pendingCount} pending

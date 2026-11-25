@@ -24,6 +24,7 @@ import {
 import {
   authApi,
   managerApi,
+  messagesApi,
   signOut,
   type Dashboard,
   type Manager,
@@ -67,6 +68,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // desktop
   const [manager, setManager] = useState<Manager | null>(null);
   const [overview, setOverview] = useState<Dashboard | null>(null);
+  const [unreadMessages, setUnreadMessages] = useState(0);
   const [search, setSearch] = useState("");
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
@@ -92,6 +94,10 @@ export function AppShell({ children }: { children: ReactNode }) {
       managerApi
         .dashboard()
         .then((d) => !cancelled && setOverview(d))
+        .catch(() => {});
+      messagesApi
+        .unread()
+        .then((r) => !cancelled && setUnreadMessages(r.total))
         .catch(() => {});
     };
     load();
@@ -217,8 +223,16 @@ export function AppShell({ children }: { children: ReactNode }) {
                 >
                   <Icon className="size-[18px]" />
                   {label}
+                  {href === "/requests" && unreadMessages > 0 && (
+                    <span
+                      title={`${unreadMessages} unread message${unreadMessages === 1 ? "" : "s"}`}
+                      className="ml-auto rounded-full bg-[#d0ee27] px-2 py-0.5 text-[10px] font-bold text-[#102331]"
+                    >
+                      ✉ {unreadMessages}
+                    </span>
+                  )}
                   {href === "/requests" && awaiting > 0 && (
-                    <span className="ml-auto rounded-full bg-[#007cc2] px-2 py-0.5 text-[10px] font-bold text-white">
+                    <span className={`${unreadMessages > 0 ? "ml-1" : "ml-auto"} rounded-full bg-[#007cc2] px-2 py-0.5 text-[10px] font-bold text-white`}>
                       {awaiting}
                     </span>
                   )}

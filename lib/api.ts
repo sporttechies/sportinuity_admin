@@ -53,6 +53,7 @@ export type LogisticsRequest = {
   status: RequestStatus;
   rejectionReason: string | null;
   managerNotes: string | null;
+  assignees?: { id: string; name: string; role: StaffRole }[];
   createdAt: string;
   updatedAt: string;
   reviewedAt: string | null;
@@ -75,6 +76,7 @@ export type RequestListParams = {
   dateFrom?: string;
   dateTo?: string;
   teamId?: string;
+  assignee?: string; // "me", "none" or a manager id
   limit?: number;
   offset?: number;
 };
@@ -106,10 +108,13 @@ export type Dashboard = {
     confirmed: number;
     travellers: number;
     teams: number;
+    rostersToReview?: number;
   };
   recent: LogisticsRequest[];
   upcoming: LogisticsRequest[];
 };
+
+export type RosterStatus = "draft" | "submitted" | "approved" | "changes_requested";
 
 export type TeamSummary = {
   id: string;
@@ -124,6 +129,7 @@ export type TeamSummary = {
   accountStatus: "active" | "disabled";
   requestCount: number;
   pendingCount: number;
+  rosterStatus?: RosterStatus;
 };
 
 export type TeamDetail = {
@@ -148,6 +154,9 @@ export type TeamDetail = {
   ageCategory: string | null;
   coach: { name: string | null; email: string | null; phone: string | null };
   rosterSubmittedAt: string | null;
+  rosterStatus: RosterStatus;
+  rosterReviewNote: string | null;
+  rosterReviewedAt: string | null;
 };
 
 export type Edition = {
@@ -357,8 +366,20 @@ export const editionsApi = {
 export const rosterApi = {
   players: async (teamId: string) =>
     (await request<{
-      data: { limit: number | null; players: Player[]; submittedAt: string | null };
+      data: {
+        limit: number | null;
+        players: Player[];
+        submittedAt: string | null;
+        status: RosterStatus;
+        reviewNote: string | null;
+        reviewedAt: string | null;
+      };
     }>(`/api/manager/teams/${teamId}/players`)).data,
+  review: async (teamId: string, body: { decision: "approve" | "request_changes"; note?: string | null }) =>
+    (await request<{ data: { status: RosterStatus; reviewNote: string | null; reviewedAt: string | null } }>(
+      `/api/manager/teams/${teamId}/roster/review`,
+      { method: "POST", body: json(body) },
+    )).data,
   /** Private documents need the token, so they're fetched and opened from a blob. */
   async openDocument(teamId: string, playerId: string) {
     const win = window.open("", "_blank");
@@ -741,4 +762,138 @@ export const mealsApi = {
     }
     return response.blob();
   },
+};
+
+// ---- transport ----------------------------------------------------------------
+export type TransportMode = "flight" | "transfer" | "coach" | "train" | "ferry" | "other";
+
+export type TransportLeg = {
+  id: string;
+  mode: TransportMode;
+  from: string;
+  to: string;
+  departDate: string;
+  departTime: string | null;
+  arriveDate: string | null;
+  arriveTime: string | null;
+  carrier: string | null;
+  bookingReference: string | null;
+  vehicle: string | null;
+  driverName: string | null;
+  driverPhone: string | null;
+  meetingPoint: string | null;
+  status: "planned" | "confirmed";
+  /** null means everyone on the request */
+  passengerIds: string[] | null;
+  passengerCount: number;
+  passengers: string[] | null;
+  notes: string | null;
+  supplierId: string | null;
+  supplier: string | null;
+};
+
+export type TransportPlan = {
+  reference: string;
+  event: string;
+  origin: string | null;
+  destination: string;
+  travellerCount: number;
+  travellers: { id: string; index: number; name: string }[];
+  legs: TransportLeg[];
+};
+
+export type TransportInput = {
+  mode: TransportMode;
+  fromLocation: string;
+  toLocation: string;
+  departDate: string;
+  departTime?: string | null;
+  arriveDate?: string | null;
+  arriveTime?: string | null;
+  carrier?: string | null;
+  bookingReference?: string | null;
+  vehicle?: string | null;
+  driverName?: string | null;
+  driverPhone?: string | null;
+  meetingPoint?: string | null;
+  supplierId?: string | null;
+  notes?: string | null;
+};
+
+export const transportApi = {
+  get: async (reference: string) => (await request<{ data: TransportPlan }>(`/api/transport/${ref(reference)}`)).data,
+  create: async (reference: string, body: TransportInput) =>
+    (await request<{ data: TransportPlan }>(`/api/transport/${ref(reference)}/legs`, { method: "POST", body: json(body) })).data,
+  update: async (id: string, body: Partial<TransportInput> & { status?: "planned" | "confirmed" }) =>
+    (await request<{ data: TransportPlan }>(`/api/transport/legs/${id}`, { method: "PATCH", body: json(body) })).data,
+  remove: async (id: string) =>
+    (await request<{ data: TransportPlan }>(`/api/transport/legs/${id}`, { method: "DELETE" })).data,
+  setPassengers: async (id: string, travellerIds: string[]) =>
+    (await request<{ data: TransportPlan }>(`/api/transport/legs/${id}/passengers`, { method: "PUT", body: json({ travellerIds }) })).data,
+  confirmAll: async (reference: string) =>
+    (await request<{ data: TransportPlan }>(`/api/transport/${ref(reference)}/confirm`, { method: "POST" })).data,
+  pdf: async (reference: string): Promise<Blob> => {
+    let response: Response;
+    try {
+      response = await fetch(`${API_URL}/api/transport/${ref(reference)}/pdf`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+    } catch {
+      throw new ApiError("Can't reach the server. Check your connection and try again.", 0);
+    }
+    if (!response.ok) {
+      if (response.status === 401) signOut();
+      const data = await response.json().catch(() => ({}));
+      throw new ApiError(data.message || "Could not load the transport PDF", response.status);
+    }
+    return response.blob();
+  },
+};
+
+// ---- messages -----------------------------------------------------------------
+export type RequestMessage = {
+  id: string;
+  from: "manager" | "team";
+  mine: boolean;
+  senderName: string;
+  body: string;
+  read: boolean;
+  createdAt: string;
+};
+
+export const messagesApi = {
+  get: async (reference: string) =>
+    (await request<{ data: { reference: string; messages: RequestMessage[] } }>(`/api/messages/${ref(reference)}`)).data,
+  post: async (reference: string, body: string) =>
+    (await request<{ data: { reference: string; messages: RequestMessage[] } }>(`/api/messages/${ref(reference)}`, {
+      method: "POST",
+      body: json({ body }),
+    })).data,
+  unread: async () =>
+    request<{ data: { reference: string; count: number }[]; total: number }>(`/api/messages/unread`),
+};
+
+// ---- staff assignments --------------------------------------------------------
+export type StaffRole = "lead" | "support" | "finance" | "on_site";
+
+export type Assignment = {
+  id: string;
+  managerId: string;
+  name: string;
+  email: string;
+  role: StaffRole;
+  note: string | null;
+  createdAt: string;
+};
+
+export type StaffMember = { id: string; name: string; email: string; openRequests: number };
+
+export const assignmentsApi = {
+  staff: async () => (await request<{ data: StaffMember[] }>("/api/assignments/staff")).data,
+  list: async (reference: string) =>
+    (await request<{ data: Assignment[] }>(`/api/assignments/for/${ref(reference)}`)).data,
+  assign: async (reference: string, body: { managerId: string; role: StaffRole; note?: string | null }) =>
+    (await request<{ data: Assignment[] }>(`/api/assignments/for/${ref(reference)}`, { method: "POST", body: json(body) })).data,
+  remove: async (id: string) =>
+    (await request<{ data: Assignment[] }>(`/api/assignments/${id}`, { method: "DELETE" })).data,
 };

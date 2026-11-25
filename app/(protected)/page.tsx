@@ -63,6 +63,11 @@ export default function OverviewPage() {
             ? `${totals.awaitingAction} request${totals.awaitingAction === 1 ? "" : "s"} need your attention`
             : "You're all caught up"}
         </h2>
+        {(totals.rostersToReview ?? 0) > 0 && (
+          <Link href="/teams" className="mt-2 inline-block rounded-full bg-[#fff4dc] px-3 py-1 text-sm font-semibold text-[#a36a00] hover:brightness-95">
+            {totals.rostersToReview} squad{totals.rostersToReview === 1 ? "" : "s"} waiting for review
+          </Link>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
