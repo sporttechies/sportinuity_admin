@@ -152,3 +152,32 @@ export const QUOTE_STATUS_STYLES: Record<QuoteStatus, string> = {
   accepted: "bg-[#eaf5ee] text-[#1c673e]",
   rejected: "bg-slate-100 text-slate-500",
 };
+
+// ---- Sports Travel ------------------------------------------------------------
+export const TRIP_STATUS_LABELS = { draft: "Draft", published: "Published", closed: "Closed", archived: "Archived" } as const;
+export const TRIP_STATUS_STYLES = {
+  draft: "bg-slate-100 text-slate-600",
+  published: "bg-[#eaf5ee] text-[#1c673e]",
+  closed: "bg-[#fff4dc] text-[#a36a00]",
+  archived: "bg-slate-100 text-slate-400",
+} as const;
+export const AUDIENCE_LABELS = { fans: "Fans", groups: "Groups", organisers: "Organisers" } as const;
+export const ITINERARY_KIND_LABELS = {
+  flight: "Flight",
+  accommodation: "Accommodation",
+  transfer: "Transfer",
+  meal: "Meal",
+  activity: "Activity",
+  event: "Event",
+  free_time: "Free time",
+  other: "Other",
+} as const;
+
+export const BOOKING_STATUS_LABELS = { pending: "Pending", confirmed: "Confirmed", completed: "Completed", cancelled: "Cancelled" } as const;
+export const BOOKING_STATUS_STYLES = {
+  pending: "bg-[#fff4dc] text-[#a36a00]",
+  confirmed: "bg-[#e8f4fb] text-[#007cc2]",
+  completed: "bg-[#eaf5ee] text-[#1c673e]",
+  cancelled: "bg-slate-100 text-slate-500",
+} as const;
+export const CUSTOMER_TYPE_LABELS = { fan: "Fan", group: "Group", organiser: "Organiser" } as const;

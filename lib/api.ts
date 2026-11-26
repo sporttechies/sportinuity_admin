@@ -897,3 +897,244 @@ export const assignmentsApi = {
   remove: async (id: string) =>
     (await request<{ data: Assignment[] }>(`/api/assignments/${id}`, { method: "DELETE" })).data,
 };
+
+// ---- my work ------------------------------------------------------------------
+export type WorkTodo = { kind: "review" | "messages" | "quotes" | "rooming" | "meals" | "transport"; label: string; anchor: string };
+
+export type MyWork = {
+  summary: {
+    assigned: number;
+    needAction: number;
+    unreadMessages: number;
+    departingSoon: number;
+    unassigned: number;
+    rostersToReview: number;
+  };
+  items: {
+    reference: string;
+    team: string | null;
+    event: string;
+    destination: string;
+    status: RequestStatus;
+    travellers: number;
+    role: StaffRole;
+    departureDate: string | null;
+    daysToDeparture: number | null;
+    unread: number;
+    todos: WorkTodo[];
+  }[];
+  unassigned: {
+    reference: string;
+    team: string | null;
+    event: string;
+    status: RequestStatus;
+    departureDate: string | null;
+    createdAt: string;
+  }[];
+};
+
+export const myWorkApi = {
+  get: async () => (await request<{ data: MyWork }>("/api/manager/my-work")).data,
+};
+
+// ---- Sports Travel: trip packages ------------------------------------------
+export type TripStatus = "draft" | "published" | "closed" | "archived";
+export type TripAudience = "fans" | "groups" | "organisers";
+export type ItineraryKind =
+  | "flight" | "accommodation" | "transfer" | "meal" | "activity" | "event" | "free_time" | "other";
+
+export type ItineraryItem = {
+  id: string;
+  dayNumber: number;
+  kind: ItineraryKind;
+  title: string;
+  details: string | null;
+  startTime: string | null;
+};
+
+export type Trip = {
+  id: string;
+  slug: string;
+  title: string;
+  eventName: string | null;
+  destination: string;
+  country: string | null;
+  startDate: string;
+  endDate: string;
+  summary: string | null;
+  description: string | null;
+  audiences: TripAudience[];
+  priceCents: number;
+  singleSupplementCents: number;
+  currency: string;
+  capacity: number | null;
+  bookingDeadline: string | null;
+  coverImageUrl: string | null;
+  inclusions: string[];
+  exclusions: string | null;
+  status: TripStatus;
+  publishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  itemCount: number;
+  seatsTaken: number;
+  itinerary?: ItineraryItem[];
+};
+
+export type TripInput = {
+  title: string;
+  eventName: string | null;
+  destination: string;
+  country: string | null;
+  startDate: string;
+  endDate: string;
+  summary: string | null;
+  description: string | null;
+  audiences: TripAudience[];
+  priceCents: number;
+  singleSupplementCents: number;
+  currency: string;
+  capacity: string | number | null;
+  bookingDeadline: string | null;
+  coverImageUrl: string | null;
+  inclusions: string[];
+  exclusions: string | null;
+};
+
+export type ItineraryInput = {
+  dayNumber: number;
+  kind: ItineraryKind;
+  title: string;
+  details: string | null;
+  startTime: string | null;
+};
+
+export const travelApi = {
+  list: async (params: { status?: string; q?: string } = {}) => {
+    const qs = new URLSearchParams();
+    if (params.status) qs.set("status", params.status);
+    if (params.q) qs.set("q", params.q);
+    return request<{ data: Trip[]; counts: Partial<Record<TripStatus, number>> }>(
+      `/api/travel/packages${qs.toString() ? `?${qs}` : ""}`,
+    );
+  },
+  get: async (id: string) => (await request<{ data: Trip }>(`/api/travel/packages/${id}`)).data,
+  create: async (body: TripInput) =>
+    (await request<{ data: Trip }>("/api/travel/packages", { method: "POST", body: json(body) })).data,
+  update: async (id: string, body: Partial<TripInput>) =>
+    (await request<{ data: Trip }>(`/api/travel/packages/${id}`, { method: "PATCH", body: json(body) })).data,
+  setStatus: async (id: string, status: TripStatus) =>
+    (await request<{ data: Trip }>(`/api/travel/packages/${id}/status`, { method: "POST", body: json({ status }) })).data,
+  duplicate: async (id: string) =>
+    (await request<{ data: Trip }>(`/api/travel/packages/${id}/duplicate`, { method: "POST" })).data,
+  remove: async (id: string) => {
+    await request(`/api/travel/packages/${id}`, { method: "DELETE" });
+  },
+  addItem: async (id: string, body: ItineraryInput) =>
+    (await request<{ data: Trip }>(`/api/travel/packages/${id}/items`, { method: "POST", body: json(body) })).data,
+  updateItem: async (itemId: string, body: Partial<ItineraryInput>) =>
+    (await request<{ data: Trip }>(`/api/travel/items/${itemId}`, { method: "PATCH", body: json(body) })).data,
+  removeItem: async (itemId: string) =>
+    (await request<{ data: Trip }>(`/api/travel/items/${itemId}`, { method: "DELETE" })).data,
+};
+
+// ---- Sports Travel: bookings -------------------------------------------------
+export type BookingStatus = "pending" | "confirmed" | "completed" | "cancelled";
+export type CustomerType = "fan" | "group" | "organiser";
+
+export type BookingTraveller = {
+  id?: string;
+  firstName: string;
+  lastName: string;
+  category: "adult" | "child";
+  documentNumber: string | null;
+  dietary: string | null;
+  singleRoom: boolean;
+};
+
+export type BookingInvoice = {
+  number: string;
+  status: "issued" | "paid" | "void";
+  issuedAt: string;
+  dueDate: string | null;
+  paidAt: string | null;
+  voidedAt: string | null;
+};
+
+export type Booking = {
+  id: string;
+  reference: string;
+  status: BookingStatus;
+  customerType: CustomerType;
+  packageId: string;
+  package: { title: string; slug: string; destination: string; eventName: string | null; startDate: string; endDate: string };
+  contactName: string;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  organisation: string | null;
+  currency: string;
+  unitPriceCents: number;
+  singleSupplementCents: number;
+  seats: number;
+  singleRooms: number;
+  totalCents: number;
+  notes: string | null;
+  managerNotes: string | null;
+  cancelReason: string | null;
+  invoice: BookingInvoice | null;
+  createdAt: string;
+  updatedAt: string;
+  travellers?: BookingTraveller[];
+  events?: { id: string; action: string; note: string | null; actorName: string | null; createdAt: string }[];
+};
+
+export type BookingInput = {
+  customerType: CustomerType;
+  contactName: string;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  organisation: string | null;
+  notes: string | null;
+  travellers: Omit<BookingTraveller, "id">[];
+};
+
+export const bookingsApi = {
+  list: (params: { status?: string; packageId?: string; q?: string; limit?: number; offset?: number } = {}) => {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => v !== undefined && v !== "" && qs.set(k, String(v)));
+    return request<{ data: Booking[]; total: number; counts: Partial<Record<BookingStatus, number>> }>(
+      `/api/travel/bookings${qs.toString() ? `?${qs}` : ""}`,
+    );
+  },
+  get: async (id: string) => (await request<{ data: Booking }>(`/api/travel/bookings/${id}`)).data,
+  create: async (packageId: string, body: BookingInput) =>
+    (await request<{ data: Booking }>(`/api/travel/packages/${packageId}/bookings`, { method: "POST", body: json(body) })).data,
+  update: async (
+    id: string,
+    body: Partial<Omit<BookingInput, "travellers">> & { managerNotes?: string | null },
+  ) => (await request<{ data: Booking }>(`/api/travel/bookings/${id}`, { method: "PATCH", body: json(body) })).data,
+  setTravellers: async (id: string, travellers: BookingInput["travellers"]) =>
+    (await request<{ data: Booking }>(`/api/travel/bookings/${id}/travellers`, { method: "PUT", body: json({ travellers }) })).data,
+  setStatus: async (id: string, status: "confirmed" | "completed" | "cancelled", reason?: string) =>
+    (await request<{ data: Booking }>(`/api/travel/bookings/${id}/status`, { method: "POST", body: json({ status, reason: reason || null }) })).data,
+  issueInvoice: async (id: string, dueDate?: string) =>
+    (await request<{ data: Booking }>(`/api/travel/bookings/${id}/invoice`, { method: "POST", body: json({ dueDate: dueDate || null }) })).data,
+  markPaid: async (id: string, paid: boolean) =>
+    (await request<{ data: Booking }>(`/api/travel/bookings/${id}/${paid ? "paid" : "unpaid"}`, { method: "POST" })).data,
+  invoicePdf: async (id: string): Promise<Blob> => {
+    let response: Response;
+    try {
+      response = await fetch(`${API_URL}/api/travel/bookings/${id}/invoice.pdf`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+    } catch {
+      throw new ApiError("Can't reach the server. Check your connection and try again.", 0);
+    }
+    if (!response.ok) {
+      if (response.status === 401) signOut();
+      const data = await response.json().catch(() => ({}));
+      throw new ApiError(data.message || "Could not load the invoice PDF", response.status);
+    }
+    return response.blob();
+  },
+};

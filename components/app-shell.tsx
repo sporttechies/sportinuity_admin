@@ -10,6 +10,8 @@ import {
   ChevronDown,
   ClipboardList,
   LayoutDashboard,
+  ListChecks,
+  Plane,
   LogOut,
   Truck,
   Receipt,
@@ -47,8 +49,10 @@ const scrollbarCss = `
 
 const NAV: { label: string; href: string; icon: LucideIcon; title: string }[] = [
   { label: "Overview", href: "/", icon: LayoutDashboard, title: "Logistics overview" },
+  { label: "My work", href: "/my-work", icon: ListChecks, title: "My work" },
   { label: "Requests", href: "/requests", icon: ClipboardList, title: "Requests" },
   { label: "Invoices", href: "/invoices", icon: Receipt, title: "Invoices" },
+  { label: "Travel", href: "/travel", icon: Plane, title: "Sports travel" },
   { label: "Teams", href: "/teams", icon: Users, title: "Teams" },
   { label: "Suppliers", href: "/suppliers", icon: Truck, title: "Suppliers" },
   { label: "Editions", href: "/editions", icon: Trophy, title: "Editions" },
